@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b6e8a">
+<link rel="icon" href="icon-192.png">
+<title>مُذكّر الماء | Water Reminder</title>
+<style>
+:root{--bg:#eaf6f7;--surface:#fff;--ink:#0d3b4a;--mute:#5b7f8a;--water:#1fa3c4;--deep:#0b6e8a;--line:#cfe4e8;--warn:#e8a33d;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#08222b;--surface:#0f3340;--ink:#e3f5f8;--mute:#8fb5c0;--water:#39b9da;--deep:#7fd6ec;--line:#1b4b5a}}
+:root[data-theme="dark"]{--bg:#08222b;--surface:#0f3340;--ink:#e3f5f8;--mute:#8fb5c0;--water:#39b9da;--deep:#7fd6ec;--line:#1b4b5a}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic",system-ui,sans-serif;line-height:1.6}
+main{max-width:460px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.5rem;margin:4px 0 0}
+.sub{color:var(--mute);margin:0 0 18px;font-size:.9rem}
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:20px;display:flex;gap:18px;align-items:center}
+.glass{position:relative;width:110px;height:170px;flex:none;border:3px solid var(--deep);border-top-width:0;border-radius:6px 6px 26px 26px;overflow:hidden;background:rgba(31,163,196,.08)}
+.fill{position:absolute;left:0;right:0;bottom:0;height:0%;background:linear-gradient(var(--water),var(--deep));transition:height .8s cubic-bezier(.3,.8,.3,1)}
+.fill::before{content:"";position:absolute;top:-9px;left:-50%;width:200%;height:18px;border-radius:45%;background:var(--water);animation:wave 4s linear infinite}
+@keyframes wave{to{transform:translateX(25%)}}
+@media (prefers-reduced-motion:reduce){.fill::before{animation:none}.fill{transition:none}}
+.pct{position:absolute;inset:0;display:grid;place-items:center;font-weight:700;font-size:1.5rem;color:var(--ink);mix-blend-mode:normal;text-shadow:0 0 6px var(--surface)}
+.stats{flex:1}
+.big{font-size:2rem;font-weight:700;margin:0;line-height:1.2}
+.big small{font-size:.9rem;color:var(--mute);font-weight:400}
+.next{margin:8px 0 0;color:var(--mute);font-size:.88rem}
+.add{display:flex;gap:10px;margin:16px 0}
+button{font:inherit;cursor:pointer;border:0;border-radius:16px;padding:14px 12px;background:var(--water);color:#04252e;font-weight:700;flex:1}
+button.alt{background:var(--surface);color:var(--ink);border:1px solid var(--line);font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+button:active{transform:scale(.97)}
+section{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:16px;margin-top:14px}
+h2{font-size:1.05rem;margin:0 0 10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0}
+label{font-size:.92rem}
+input,select{font:inherit;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);max-width:48%}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line);font-size:.92rem}
+li:last-child{border:0}
+.empty{color:var(--mute);font-size:.9rem}
+#toast{position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));max-width:436px;margin:0 auto;background:var(--deep);color:#fff;padding:14px 16px;border-radius:18px;transform:translateY(-140%);transition:transform .4s;z-index:20;font-weight:600}
+#toast.show{transform:none}
+.note{font-size:.8rem;color:var(--mute);margin:8px 0 0}
+</style>
+</head>
+<body>
+<div id="toast" role="status" aria-live="polite"></div>
+<main>
+<h1>💧 مُذكّر الماء</h1>
+<p class="sub">Water Reminder — اشرب، سجّل، وخلّي جسمك نشيط</p>
+
+<div class="hero">
+  <div class="glass" aria-hidden="true"><div class="fill" id="fill"></div><div class="pct" id="pct">0%</div></div>
+  <div class="stats">
+    <p class="big"><span id="cur">0</span> <small>/ <span id="goalTxt">2500</span> مل · ml</small></p>
+    <p class="next" id="next">التذكير متوقف · Reminders off</p>
+  </div>
+</div>
+
+<div class="add">
+  <button id="addBtn">+ كوب · Glass</button>
+  <button class="alt" id="undoBtn">↩ تراجع · Undo</button>
+</div>
+
+<section>
+  <h2>⏰ التذكيرات · Reminders</h2>
+  <div class="row"><label for="on">تشغيل التذكير · Enable</label><input type="checkbox" id="on" style="width:22px;height:22px"></div>
+  <div class="row"><label for="int">كل · Every</label>
+    <select id="int"><option value="30">30 دقيقة · min</option><option value="45">45 دقيقة · min</option><option value="60">ساعة · 1 h</option><option value="90">90 دقيقة · min</option><option value="120">ساعتين · 2 h</option></select></div>
+  <div class="row"><label for="from">من · From</label><input type="time" id="from"></div>
+  <div class="row"><label for="to">إلى · To</label><input type="time" id="to"></div>
+  <p class="note">⚠️ التذكير يشتغل والصفحة مفتوحة. للتذكير والشاشة مقفلة استخدم منبّه الجوال. · Works while this page is open; use your phone alarm for background alerts.</p>
+</section>
+
+<section>
+  <h2>🎯 الإعدادات · Settings</h2>
+  <div class="row"><label for="goal">الهدف اليومي (مل) · Daily goal (ml)</label><input type="number" id="goal" min="500" max="6000" step="100"></div>
+  <div class="row"><label for="cup">حجم الكوب (مل) · Glass size (ml)</label><input type="number" id="cup" min="50" max="1000" step="50"></div>
+</section>
+
+<section>
+  <h2>📋 سجل اليوم · Today's log</h2>
+  <ul id="log"></ul>
+</section>
+</main>
+
+<script>
+(function(){
+var KEY="waterReminderV1";
+var S={goal:2500,cup:250,on:false,int:60,from:"08:00",to:"22:00",day:"",log:[],next:0};
+function today(){var d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();}
+function load(){try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);for(var k in o)S[k]=o[k];}}catch(e){}
+  if(S.day!==today()){S.day=today();S.log=[];save();}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+var $=function(i){return document.getElementById(i)};
+function total(){return S.log.reduce(function(a,b){return a+b.ml},0)}
+function fmt(t){var d=new Date(t);return d.toLocaleTimeString("ar",{hour:"2-digit",minute:"2-digit"})}
+function render(){
+  var t=total(),p=Math.min(100,Math.round(t/S.goal*100));
+  $("fill").style.height=p+"%";$("pct").textContent=p+"%";
+  $("cur").textContent=t;$("goalTxt").textContent=S.goal;
+  $("log").innerHTML=S.log.length?S.log.slice().reverse().map(function(l){return "<li><span>💧 "+l.ml+" مل</span><span>"+fmt(l.t)+"</span></li>"}).join(""):'<li class="empty">ما سجلت شي لحد الآن · Nothing logged yet</li>';
+  $("next").textContent=(S.on&&S.next)?"التذكير القادم · Next: "+fmt(S.next):"التذكير متوقف · Reminders off";
+  if(t>=S.goal)$("next").textContent="🎉 حققت هدف اليوم! · Goal reached!";
+}
+function toast(m){var e=$("toast");e.textContent=m;e.classList.add("show");setTimeout(function(){e.classList.remove("show")},6000);}
+function beep(){try{var c=new(window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=660;g.gain.value=.08;o.start();setTimeout(function(){o.stop();c.close()},250);}catch(e){}}
+function mins(s){var a=s.split(":");return +a[0]*60+ +a[1]}
+function inWindow(d){var m=d.getHours()*60+d.getMinutes();return m>=mins(S.from)&&m<=mins(S.to)}
+function schedule(){S.next=S.on?Date.now()+S.int*60000:0;save();render();}
+function remind(){
+  var msg="💧 وقت الماء! اشرب كوب · Time to drink water!";
+  toast(msg);beep();
+  try{if("Notification"in window&&Notification.permission==="granted")new Notification("💧 مُذكّر الماء",{body:msg});}catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate(200)}catch(e){}
+}
+setInterval(function(){
+  if(S.day!==today()){S.day=today();S.log=[];save();render();}
+  if(S.on&&S.next&&Date.now()>=S.next){
+    if(inWindow(new Date())&&total()<S.goal)remind();
+    S.next=Date.now()+S.int*60000;save();render();
+  }
+},1000);
+$("addBtn").onclick=function(){S.log.push({ml:S.cup,t:Date.now()});if(S.on)S.next=Date.now()+S.int*60000;save();render();
+  if(total()>=S.goal)toast("🎉 ممتاز! وصلت هدفك اليومي · Daily goal reached!");};
+$("undoBtn").onclick=function(){S.log.pop();save();render();};
+$("on").onchange=function(){S.on=this.checked;
+  if(S.on){try{if("Notification"in window&&Notification.permission==="default")Notification.requestPermission();}catch(e){}toast("✅ تم تشغيل التذكير · Reminders on");}
+  schedule();};
+$("int").onchange=function(){S.int=+this.value;schedule();};
+$("from").onchange=function(){S.from=this.value||"08:00";save();};
+$("to").onchange=function(){S.to=this.value||"22:00";save();};
+$("goal").onchange=function(){S.goal=Math.max(500,+this.value||2500);save();render();};
+$("cup").onchange=function(){S.cup=Math.max(50,+this.value||250);save();};
+load();
+$("on").checked=S.on;$("int").value=String(S.int);$("from").value=S.from;$("to").value=S.to;$("goal").value=S.goal;$("cup").value=S.cup;
+if(S.on&&(!S.next||S.next<Date.now()))S.next=Date.now()+S.int*60000;
+render();
+})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script>
+</body>
+</html>
